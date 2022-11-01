@@ -19,8 +19,8 @@ All the dependencies and modules needed are included in the executable.
 - Will strip SUBRACEs if loaded and re-saved (and doesn't support them in general).
 - Doesn't support multiple race prerequisite options (e.g., requires either Halfling or Gnome)
 - Many unsupported tokens, prerequisites, etc.  For example, does not support:
-  -- "OR"-type requirements (e.g.: either Str or Dex must be 13 or higher; must have Power Attack or 15 Dex)
-    --- Note: "OR"-type requirements can be documented in the "narrative requirements" field (using PRETEXT:)
+-- "OR"-type requirements (e.g.: either Str or Dex must be 13 or higher; must have Power Attack or 15 Dex)
+--- Note: "OR"-type requirements can be documented in the "narrative requirements" field (using PRETEXT:)
 - Cannot edit existing .MODs.  The program can't necessarily find the ability the .MOD is based on, so it will never be able to fully edit arbitrary .MODs using the full GUI.  Editing .MODs that refer to loaded abilities might be possible, but probably a pain to code given the current data structure. 
 
 ## Reporting
