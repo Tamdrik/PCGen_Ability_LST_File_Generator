@@ -2,7 +2,7 @@
 A user-friendly GUI written in Python to generate PCGen-compatible .lst files for homebrew abilities. Currently compatible with Pathfinder 1e, D&D 3.5e, and D&D 5e. 
 
 ## Instructions (Windows)
-1) Download the [latest release](https://github.com/Tamdrik/PCGen-Ability-LST-File-Generator/releases) as a Windows executable file.
+1) Download the [latest release](https://github.com/Tamdrik/PCGen_Ability_LST_File_Generator/releases) as a Windows executable file.
 2) Run the executable. 
 
 All the dependencies and modules needed are included in the executable.
