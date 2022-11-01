@@ -25,15 +25,14 @@ KNOWN ISSUES AND LIMITATIONS:
     possible, but probably a pain to code. 
 
 TO-DO:
-- Test PREALIGN reading/parsing/editing
 - Thorough testing, writing/reading/writing repeatedly, etc.
 
-v0.1:
-Feature-complete beta release.  Could still use significant testing. 
+v0.1.0 (1 Nov 2022):
+Feature-complete initial public beta release.  Could still use significant testing. 
 """
 
 PCGEN_TAB_SIZE = 6  # Used to format field spacing when writing to a .lst file
-VERSION = "0.1 (beta)"
+VERSION = "0.1.0 (beta)"
 BUILD_DATE = "1 November 2022"
 
 ALIGNMENTS = ("LG", "NG", "CG", "LN", "N", "CN", "LE", "NE", "CE")
