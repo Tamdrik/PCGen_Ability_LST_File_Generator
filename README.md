@@ -15,7 +15,7 @@ All the dependencies and modules needed are included in the executable.
 3) Run pcgen_ability_lst_generator.py from your terminal.
 
 ## Known Issues
-- Does not handle class abilities and other abilities besides Feats, Traits, and GM-Awarded abilities.
+- Does not handle class abilities, special racial traits, and other abilities besides Feats, Traits, and GM-Awarded abilities.
 - Does not handle any mechanically-applied bonuses, only descriptions on the character sheet.  Bonuses are too diverse and complex to reasonably implement in a GUI/wizard, and if a user is able to do this properly, they're probably comfortable with editing .lst files directly anyway (or editing the BONUS tag in the generic "other fields" section of the GUI).
 - Will strip SUBRACEs if loaded and re-saved (and doesn't support them in general).
 - Doesn't support multiple race prerequisite options (e.g., requires either Halfling or Gnome)
