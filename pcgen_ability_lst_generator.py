@@ -7,6 +7,7 @@ from tkinter import ttk
 from tktooltip import ToolTip
 import re
 import os
+import winreg
 
 # import copy
 
@@ -36,13 +37,16 @@ Feature-complete initial public beta release.  Could still use significant testi
 v0.1.1 (unreleased):
 Removed some vestigial references to spells from code based on spell generator.   
 
-v0.2 (5 Feb 2023):
+v0.2.0 (5 Feb 2023):
 Fixed bug in generating a PCC file.
+
+v0.2.1 (6 Feb 2023):
+Added a Windows registry check to try to find PCGen install location if cannot find it in default location.
 """
 
 PCGEN_TAB_SIZE = 6  # Used to format field spacing when writing to a .lst file
-VERSION = "0.2 (beta)"
-BUILD_DATE = "1 November 2022"
+VERSION = "0.2.1 (beta)"
+BUILD_DATE = "6 February 2023"
 
 ALIGNMENTS = ("LG", "NG", "CG", "LN", "N", "CN", "LE", "NE", "CE")
 
@@ -1054,6 +1058,7 @@ class AbilityGenerator:
             messagebox.showerror("No abilities defined", "No abilities to save to a .lst file.  " +
                                  "Load and/or add abilities first.")
             return
+        print("Default dir is: " + self.default_directory)
         filename = filedialog.asksaveasfilename(initialdir=self.default_directory,
                                                 title="Select a file to save to (will overwrite existing abilities!)",
                                                 confirmoverwrite=True,
@@ -1276,6 +1281,7 @@ class AbilityGenerator:
                 lines = f.readlines()
         except FileNotFoundError:
             self.default_directory = self.find_pcgen_directory()
+            print("Default dir set to: " + self.default_directory)
             mode_dialog = Tk()
             mode_dialog.title("Game mode?")
             qlabel = Label(mode_dialog, text="Which system are you using?", font='bold')
@@ -1331,10 +1337,37 @@ class AbilityGenerator:
             print(e)
             path = "."
         if not pcgen_folder_found:
+            reg_path = AbilityGenerator.find_pcgen_directory_registry()
+            if reg_path is not None:
+                reg_path = os.path.join(reg_path, "data")
+                return reg_path
+
+        if not pcgen_folder_found:
             messagebox.showwarning("Could not find PCGen Directory", "Couldn't find PCGen directory in standard " +
                                    "install location.  You will need to save .lst files in a homebrew folder " +
                                    "somewhere under the 'data' folder where PCGen is installed on your system.")
         return path
+
+    @staticmethod
+    def find_pcgen_directory_registry() -> str:
+        path = winreg.HKEY_LOCAL_MACHINE
+        try:
+            key = winreg.OpenKeyEx(path, r"SOFTWARE\\WOW6432Node\\PCGen")
+            value = winreg.EnumKey(key, 0)
+            print(value)
+            if key:
+                winreg.CloseKey(key)
+                key = winreg.OpenKeyEx(path, r"SOFTWARE\\WOW6432Node\\PCGen\\" + value)
+                print("key opened")
+                value = winreg.QueryValueEx(key, "")
+                print("key queried")
+                if key:
+                    winreg.CloseKey(key)
+                print(value[0])
+                return value[0]
+        except Exception as e:
+            print(e)
+            return None
 
     @staticmethod
     def load_ability_lst(filename: str) -> tuple:
@@ -2081,7 +2114,7 @@ class AbilityEditor(Frame):
                     AbilityGenerator.generate_ability_lst(filename=filename, abilities=[], mods=[str(mod)],
                                                           other_entries=[])
                     messagebox.showinfo("Success", "Saved MOD to file: " + filename)
-                    AbilityGenerator.check_for_pcc_file(filename=filename)
+                    self.check_for_pcc_file(filename=filename)
                 else:
                     return
             else:
@@ -2484,7 +2517,6 @@ def main():
     mod = Mod(base_ability=ability, modified_ability=ability2)
     print(mod)
     """
-
     ag = AbilityGenerator()
     ag.run()
 
