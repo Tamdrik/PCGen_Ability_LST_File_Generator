@@ -1058,7 +1058,6 @@ class AbilityGenerator:
             messagebox.showerror("No abilities defined", "No abilities to save to a .lst file.  " +
                                  "Load and/or add abilities first.")
             return
-        print("Default dir is: " + self.default_directory)
         filename = filedialog.asksaveasfilename(initialdir=self.default_directory,
                                                 title="Select a file to save to (will overwrite existing abilities!)",
                                                 confirmoverwrite=True,
@@ -1281,7 +1280,6 @@ class AbilityGenerator:
                 lines = f.readlines()
         except FileNotFoundError:
             self.default_directory = self.find_pcgen_directory()
-            print("Default dir set to: " + self.default_directory)
             mode_dialog = Tk()
             mode_dialog.title("Game mode?")
             qlabel = Label(mode_dialog, text="Which system are you using?", font='bold')
@@ -1354,16 +1352,12 @@ class AbilityGenerator:
         try:
             key = winreg.OpenKeyEx(path, r"SOFTWARE\\WOW6432Node\\PCGen")
             value = winreg.EnumKey(key, 0)
-            print(value)
             if key:
                 winreg.CloseKey(key)
                 key = winreg.OpenKeyEx(path, r"SOFTWARE\\WOW6432Node\\PCGen\\" + value)
-                print("key opened")
                 value = winreg.QueryValueEx(key, "")
-                print("key queried")
                 if key:
                     winreg.CloseKey(key)
-                print(value[0])
                 return value[0]
         except Exception as e:
             print(e)
