@@ -7,10 +7,12 @@ from tkinter import ttk
 from tktooltip import ToolTip
 import re
 import os
-#import copy
+
+# import copy
 
 """
 KNOWN ISSUES AND LIMITATIONS:
+- Does not handle class abilities and other abilities besides Feats, Traits, and GM-Awarded abilities.
 - Does not handle any mechanically-applied bonuses, only descriptions on the character sheet.  Bonuses are too diverse
     and complex to reasonably implement in a GUI/wizard, and if a user is able to do this properly, they're probably
     comfortable with editing .lst files directly anyway (or editing the BONUS tag in the generic "other fields" section
@@ -26,13 +28,20 @@ KNOWN ISSUES AND LIMITATIONS:
 
 TO-DO:
 - Thorough testing, writing/reading/writing repeatedly, etc.
+- Possibly allow removing/modifying PRExxx fields from 'other fields' and saving as a MOD.
 
 v0.1.0 (1 Nov 2022):
-Feature-complete initial public beta release.  Could still use significant testing. 
+Feature-complete initial public beta release.  Could still use significant testing.
+
+v0.1.1 (unreleased):
+Removed some vestigial references to spells from code based on spell generator.   
+
+v0.2 (5 Feb 2023):
+Fixed bug in generating a PCC file.
 """
 
 PCGEN_TAB_SIZE = 6  # Used to format field spacing when writing to a .lst file
-VERSION = "0.1.0 (beta)"
+VERSION = "0.2 (beta)"
 BUILD_DATE = "1 November 2022"
 
 ALIGNMENTS = ("LG", "NG", "CG", "LN", "N", "CN", "LE", "NE", "CE")
@@ -45,7 +54,7 @@ class Ability:
                  required_bab: int = 0, required_level: int = 0, mult: bool = False, stack: bool = False,
                  key: str = None, pretext: str = "", other_fields: list = [], mode: str = "Pathfinder 1e"):
         """
-        Type representing a Pathfinder/3.5e/5e spell to be stored in a PCGen .lst file.
+        Type representing a Pathfinder/3.5e/5e ability to be stored in a PCGen .lst file.
 
         :param name: Name of ability
         :param ability_type: Type of ability.  Valid values are "Feat", "Trait", "GM_Award"
@@ -410,8 +419,8 @@ class Ability:
                     premult_present = True
             if not premult_present:
                 self.other_fields.append("PREMULT:1,[PREABILITY:1,CATEGORY=Special Ability," + self.fields['key'] +
-                                 "],[PREVAREQ:BypassTraitRestriction,1],[!PREABILITY:1,CATEGORY:Special Ability,TYPE." +
-                                 self.fields['ability_subtypes'][0] + "Trait]")
+                                         "],[PREVAREQ:BypassTraitRestriction,1],[!PREABILITY:1,CATEGORY:Special Ability,TYPE." +
+                                         self.fields['ability_subtypes'][0] + "Trait]")
 
         if self.prestat["bab"] > 0:
             ability_string = ability_string + "\t" + self.tags["bab"] + str(self.prestat["bab"])
@@ -492,7 +501,7 @@ class Ability:
         Calls "calculate_tabs_raw" to do actual calculations after building the full token string to pass it.  Only
         works with fields that are stored as a raw string, not lists such as classes and descriptors.
 
-        :param field_name: Name of field from Spell.fields/Spell.tags dict keys (e.g., "range")
+        :param field_name: Name of field from Ability.fields/Ability.tags dict keys (e.g., "name")
         :param field_width: How many tabs this token's column should span
         :return: Tuple containing number of padding tabs needed, followed by how many extra tabs wide the column is, if
                  it is larger than the designated field width.  This second value is used to reduce the tab padding of
@@ -506,7 +515,7 @@ class Ability:
         """
         Formatting helper function to determine how many tabs need to be added to token to align columns of fields.
 
-        :param token: Full text of token string, including tag name (e.g., "TYPE:Arcane.Divine")
+        :param token: Full text of token string, including tag name (e.g., "TYPE:Combat.Teamwork")
         :param field_width: How many tabs this token's column should span
         :return: Tuple containing number of padding tabs needed, followed by how many extra tabs wide the column is, if
                  it is larger than the designated field width.  This second value is used to reduce the tab padding of
@@ -722,9 +731,10 @@ class Mod:
                     premult_present = True
             if not premult_present:
                 self.modified_ability.other_fields.append("PREMULT:1,[PREABILITY:1,CATEGORY=Special Ability," +
-                              self.modified_ability.fields['key'] +
-                              "],[PREVAREQ:BypassTraitRestriction,1],[!PREABILITY:1,CATEGORY:Special Ability,TYPE." +
-                              self.modified_ability.fields['ability_subtypes'][0] + "Trait]")
+                                                          self.modified_ability.fields['key'] +
+                                                          "],[PREVAREQ:BypassTraitRestriction,1],[!PREABILITY:1,CATEGORY:Special Ability,TYPE." +
+                                                          self.modified_ability.fields['ability_subtypes'][
+                                                              0] + "Trait]")
 
         if self.modified_ability.prestat["bab"] > 0 and (clear_prerequisites or self.base_ability.prestat["bab"] == 0):
             mod_string = mod_string + "\t" + self.modified_ability.tags["bab"] + \
@@ -893,7 +903,7 @@ class AbilityGenerator:
             self.mods_lb.insert(END, Mod.extract_key(mod))
 
         self.ability_mod_tabs.add(self.mods_tab_frame, text="MODs")
-        (self.mod_tab_id, self.ability_tab_id) = (1,0)
+        (self.mod_tab_id, self.ability_tab_id) = (1, 0)
 
         # self.scrollbar = Scrollbar(self.ability_list_frame)
         # self.scrollbar = Scrollbar(self.ability_mod_frame)
@@ -927,7 +937,7 @@ class AbilityGenerator:
                                             command=self.remove_ability)
         self.remove_ability_button.pack(side=LEFT, pady=(0, 10))
 
-        # Build spell editing frame
+        # Build ability editing frame
         self.ability_editor = AbilityEditor(master=self.win, generator=self)
         self.ability_editor.pack(side=RIGHT, fill=BOTH, expand=True)
 
@@ -935,7 +945,7 @@ class AbilityGenerator:
         """ Initiate the main loop of the AbilityGenerator GUI. """
         self.win.mainloop()
 
-    def update_buttons(self, arg = None) -> None:
+    def update_buttons(self, arg=None) -> None:
         if self.ability_mod_tabs.tab(self.ability_mod_tabs.select(), "text") == "Abilities":
             self.edit_ability_button.configure(state="normal")
         else:
@@ -943,7 +953,7 @@ class AbilityGenerator:
 
     def set_system(self) -> None:
         """
-        Update everything according to selected system mode.  Swaps spell lists & re-initializes ability editing frame
+        Update everything according to selected system mode.  Swaps ability lists & re-initializes ability editing frame
         to reflect elements that are relevant to current system.
         """
         self.ability_list_label.configure(text=self.system_mode.get())
@@ -993,7 +1003,7 @@ class AbilityGenerator:
         self.mods_lb.insert(END, mod.key)
 
     def remove_ability(self) -> None:
-        """ Deletes the selected spell from the list. """
+        """ Deletes the selected ability from the list. """
         if self.ability_mod_tabs.tab(self.ability_mod_tabs.select(), "text") == "Abilities":
             try:
                 index = self.ability_lb.curselection()[0]
@@ -1013,7 +1023,7 @@ class AbilityGenerator:
 
     def edit_ability(self, arg=None) -> None:
         """
-        Loads the selected spell into the editing frame, copying its attributes into the corresponding GUI elements.
+        Loads the selected ability into the editing frame, copying its attributes into the corresponding GUI elements.
 
         :param arg: Second argument is needed for some event binding for some reason.
         """
@@ -1027,7 +1037,7 @@ class AbilityGenerator:
 
     def save_abilities(self, mods_only: bool = False) -> None:
         """
-        Save the current list of abilities to a .lst file, one line per spell.  If there are any .MODs stored (from
+        Save the current list of abilities to a .lst file, one line per ability.  If there are any .MODs stored (from
         previously loading a .lst file), those will also be written to the end of the file.
 
         If no .pcc file is found in the folder where the .lst file is located, this function will offer to create one
@@ -1084,13 +1094,12 @@ class AbilityGenerator:
             messagebox.showinfo("Success", "Saved abilities to file: " + filename)
             self.check_for_pcc_file(filename=filename)
 
-    @staticmethod
-    def check_for_pcc_file(filename: str) -> None:
+    def check_for_pcc_file(self, filename: str) -> None:
         """
         Checks for existence of a .pcc file that includes a reference to the given filename (an ability .lst file).  If
         a .pcc file is found in the folder of the given filename, this calls 'update_pcc_file()' which checks for an
-        'ABILITY=' reference to the given .lst filename. If no reference is found, it prompts the user to add one. 
-        
+        'ABILITY=' reference to the given .lst filename. If no reference is found, it prompts the user to add one.
+
         If no .pcc file is found at all, this will prompt the user to create a new one, by calling
         'generate_pcc_file()', which will create a new .pcc file with a reference to the given ability .lst file.
 
@@ -1109,7 +1118,7 @@ class AbilityGenerator:
                                                         title="Select a filename for your new source (e.g., homebrew.pcc)",
                                                         confirmoverwrite=True,
                                                         filetypes=(("PCGen PCC Files", "*.pcc"), ("All Files", "*.*")))
-                success = AbilityGenerator.generate_pcc_file(pcc_file=pcc_file, ability_lst_file=filename)
+                success = self.generate_pcc_file(pcc_file=pcc_file, ability_lst_file=filename)
                 if success:
                     messagebox.showinfo("Success", "Successfully generated new .pcc file. Source should be " +
                                         "available in PCGen under the publisher \'Homebrew\'.")
@@ -1117,7 +1126,7 @@ class AbilityGenerator:
                 messagebox.showinfo("No .pcc file for PCGen", "PCGen may not be able to load your .lst file " +
                                     "without a valid .pcc file.")
         else:
-            AbilityGenerator.update_pcc_file(pcc_file=pcc_file, lst_file=filename)
+            self.update_pcc_file(pcc_file=pcc_file, lst_file=filename)
 
     def save_mods(self) -> None:
         """ Saves all MODs only (not Abilities) to a file by calling save_abilities(mods_only=True). """
@@ -1125,10 +1134,10 @@ class AbilityGenerator:
 
     def generate_pcc_file(self, pcc_file: str, ability_lst_file: str) -> bool:
         """
-        If no .pcc file was found when saving spells to a .lst, this function is called to create a new .pcc file that
-        will load the given ability .lst file.  Asks the user which system they are using between Pathfinder and D&D 3.5
-        and configures the .pcc file accordingly.  The newly-created source will be available in PCGen under the
-        publisher "Homebrew".
+        If no .pcc file was found when saving abilities to a .lst, this function is called to create a new .pcc file
+        that will load the given ability .lst file.  Asks the user which system they are using between Pathfinder 1e,
+        D&D 3.5e, or D&D 5e and configures the .pcc file accordingly.  The newly-created source will be available in
+        PCGen under the publisher "Homebrew".
 
         :param pcc_file: Fully-qualified path of the .pcc file to be created (string).
         :param ability_lst_file: Fully-qualified path of the .lst file containing the abilities just saved (string).
@@ -1156,7 +1165,7 @@ class AbilityGenerator:
                 f.write("SOURCELONG:" + pcc_name.title() + "\n")
                 f.write("SOURCESHORT:Homebrew\n")
                 f.write("RANK:9\n")
-                f.write("DESC:Homebrew content generated by PCGen Homebrew Spell LST Generator\n\n")
+                f.write("DESC:Homebrew content generated by PCGen Homebrew Ability LST Generator\n\n")
                 f.write("ABILITY:" + os.path.basename(ability_lst_file))
                 return True
         except Exception as e:
@@ -1228,15 +1237,15 @@ class AbilityGenerator:
     def mod_help() -> None:
         messagebox.showinfo(title="What is a MOD?",
                             message="A MOD (modification) is a change to an existing ability (or other PCGen entry). " +
-                            "PCGen will load the base ability from its original source, then apply these changes to " +
-                            "it. If you save your modified ability as an entirely new ability with the same " +
-                            "name/key, PCGen will have issues trying to figure out which one to load if both sources " +
-                            "are loaded.\n\nThis tool lets you create a MOD when you 'Edit' a loaded ability and " +
-                            "make changes to it, then select 'Add as Mod' or 'Append as Mod to .lst file'.\n\n" +
-                            "If you want to make a change to an existing ability like Power Attack, for instance " +
-                            "to remove the Strength requirement, you should save your change as a MOD.  If you want " +
-                            "to define a new ability similar to Power Attack, but that coexists with it, you should " +
-                            "make your change, then rename it and change the key (e.g., 'Super Power Attack').")
+                                    "PCGen will load the base ability from its original source, then apply these changes to " +
+                                    "it. If you save your modified ability as an entirely new ability with the same " +
+                                    "name/key, PCGen will have issues trying to figure out which one to load if both sources " +
+                                    "are loaded.\n\nThis tool lets you create a MOD when you 'Edit' a loaded ability and " +
+                                    "make changes to it, then select 'Add as Mod' or 'Append as Mod to .lst file'.\n\n" +
+                                    "If you want to make a change to an existing ability like Power Attack, for instance " +
+                                    "to remove the Strength requirement, you should save your change as a MOD.  If you want " +
+                                    "to define a new ability similar to Power Attack, but that coexists with it, you should " +
+                                    "make your change, then rename it and change the key (e.g., 'Super Power Attack').")
 
     def on_exit(self) -> None:
         """
@@ -1366,17 +1375,17 @@ class AbilityGenerator:
                                            str(datetime.datetime.now()).split(" ")[0],
                              mode: str = "Pathfinder 1e") -> None:
         """
-        Writes a list of Spells to a .lst file in PCGen format.
+        Writes a list of Abilities to a .lst file in PCGen format.
 
         :param filename: String containing fully-qualified path of .lst file to write to.
-        :param abilities: List of Spell objects to convert to .lst format and write to file.
+        :param abilities: List of Ability objects to convert to .lst format and write to file.
         :param mods: List of strings containing .MODs to write back to file (typically preserved from loading a .lst
                     file previously).
         :param other_entries: List of strings containing other ability entries such as class abilities that aren't
                     supported by this tool (typically preserved from loading a .lst file previously).
         :param header: String containing the initial header line of the .lst file.  Defaults to a generic header
                     specifying source as "Homebrew" with current date.
-        :param mode: String defining what game/system mode context to use when writing spells to a .lst
+        :param mode: String defining what game/system mode context to use when writing abilities to a .lst
         """
         with open(filename, "w") as f:
             f.write("# Generated by PCGen Ability LST File Generator " +
@@ -1512,16 +1521,16 @@ class AbilityEditor(Frame):
         self.subtypes_lb = Listbox(ability_subtype_frame, height=4, width=20)
         if self.mode == "Pathfinder 1e":
             ToolTip(ability_subtype_frame, msg="Pathfinder traits generally have a single subtype, and a character\n" +
-                                           "typically can only have one trait of a given type.\n\n" +
-                                           "Feat types often affect bonus feat eligibility (e.g., Fighters get\n" +
-                                           "'Combat'-type bonus feats)\n\n" +
-                                           "Note that GM-awarded abilities traits generally do not have " +
-                                           "subtypes.")
+                                               "typically can only have one trait of a given type.\n\n" +
+                                               "Feat types often affect bonus feat eligibility (e.g., Fighters get\n" +
+                                               "'Combat'-type bonus feats)\n\n" +
+                                               "Note that GM-awarded abilities traits generally do not have " +
+                                               "subtypes.")
         elif self.mode == "D&D 3.5e":
             ToolTip(ability_subtype_frame, msg="Feat types often affect bonus feat eligibility (e.g., Fighters get\n" +
-                                           "'Fighter'-type bonus feats)\n\n" +
-                                           "Note that GM-awarded abilities and traits generally do not have " +
-                                           "subtypes.")
+                                               "'Fighter'-type bonus feats)\n\n" +
+                                               "Note that GM-awarded abilities and traits generally do not have " +
+                                               "subtypes.")
         self.selected_subtype = StringVar(self.master)
         self.ability_subtypes = []
         self.set_subtypes()
@@ -1668,15 +1677,22 @@ class AbilityEditor(Frame):
                                                        command=self.spawn_aspect_dialog)
         self.ability_buttons['create_aspect'].pack(side=LEFT)
         ToolTip(self.ability_buttons['create_aspect'], msg="Advanced tool: Open a wizard to create an ASPECT that " +
-                "adds narrative\n(typically conditional/situational) bonuses to the front of a character sheet.\n\n" +
-                "E.g., \"+2 to saves against charm effects\" can be added to the character's\nsaving throw " +
-                "information box.\n\n" +
-                "Can also add a resource tracker that shows a number of checkboxes\non the printed character sheet " +
-                "to track number of uses for the ability\n(e.g., number of rounds per day of rage).")
+                                                           "adds narrative\n(typically conditional/situational) bonuses to the front of a character sheet.\n\n" +
+                                                           "E.g., \"+2 to saves against charm effects\" can be added to the character's\nsaving throw " +
+                                                           "information box.\n\n" +
+                                                           "Can also add a resource tracker that shows a number of checkboxes\non the printed character sheet " +
+                                                           "to track number of uses for the ability\n(e.g., number of rounds per day of rage).")
 
-        ToolTip(other_fields_frame,
+        ToolTip(self.ability_fields['other'],
                 msg="Other tab-separated tokens not explicitly supported by this tool. Edit with caution.\n" +
-                    "Examples:\nSOURCEPAGE:p.50\nBONUS:SKILL|Stealth|2|TYPE=Insight")
+                    "Examples:\nSOURCEPAGE:p.50\nBONUS:SKILL|Stealth|2|TYPE=Insight\n\n" +
+                    "Note that if any existing 'other fields' are removed or modified, saving as a MOD will not\n" +
+                    "work properly.  The ability will need to be saved as a new ability under a different name/key.")
+        ToolTip(self.other_fields_lb,
+                msg="Other tab-separated tokens not explicitly supported by this tool. Edit with caution.\n" +
+                    "Examples:\nSOURCEPAGE:p.50\nBONUS:SKILL|Stealth|2|TYPE=Insight\n\n" +
+                    "Note that if any existing 'other fields' are removed or modified, saving as a MOD will not\n" +
+                    "work properly.  The ability will need to be saved as a new ability under a different name/key.")
 
         row = row + 1
         ability_edit_subframes[row].configure(height=10)
@@ -1684,7 +1700,7 @@ class AbilityEditor(Frame):
                                                      command=self.add_ability, font=('bold', 14), width=20)
         self.ability_buttons['add_ability'].pack(side=TOP, pady=10)
         self.ability_buttons['add_mod'] = Button(ability_edit_subframes[row], text="Add as MOD",
-                                                  command=self.add_mod, width=20)
+                                                 command=self.add_mod, width=20)
         self.ability_buttons['add_mod'].pack(side=TOP, pady=0)
         ToolTip(self.ability_buttons['add_mod'], msg="Save changes to this ability as a .MOD (modification), " +
                                                      "instead of a new ability.\n\nSee 'Help\u2192" +
@@ -1703,7 +1719,7 @@ class AbilityEditor(Frame):
             self.ability_buttons['add_mod'].configure(state="disabled")
             self.ability_buttons['save_mod'].configure(state="disabled")
 
-    def check_delta(self, var = None, index = None, mode = None) -> bool:
+    def check_delta(self, var=None, index=None, mode=None) -> bool:
         """
         Highlights GUI widgets containing values that have been modified when editing an existing ability and
         enables/disables MOD-related buttons as appropriate (if nothing has been modified from currently loaded
@@ -1825,7 +1841,7 @@ class AbilityEditor(Frame):
         if modified:
             if self.ability_var['type'].get() != self.loaded_ability.fields['ability_type']:
                 answer = messagebox.askyesno(title="Cannot change ability type", message="Cannot modify the type of " +
-                                             "an ability.  Save as new ability and update key?")
+                                                                                         "an ability.  Save as new ability and update key?")
                 if answer:
                     self.loaded_ability = None
                     self.ability_var['key'].set(self.ability_var['type'].get() + " ~ " + self.ability_var['key'].get())
@@ -2070,7 +2086,8 @@ class AbilityEditor(Frame):
                     return
             else:
                 if os.path.dirname(filename).count("/data") == 0:
-                    answer = messagebox.askokcancel("Warning", "It doesn't look like this is a valid subdirectory under " +
+                    answer = messagebox.askokcancel("Warning",
+                                                    "It doesn't look like this is a valid subdirectory under " +
                                                     "the PCGen 'data' folder.  PCGen will not be able to find/load " +
                                                     "sources from other locations.  Continue?")
                     if not answer:
